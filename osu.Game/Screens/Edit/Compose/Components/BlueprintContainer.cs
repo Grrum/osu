@@ -338,7 +338,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
         private bool beginClickSelection(MouseButtonEvent e)
         {
             // Iterate from the top of the input stack (blueprints closest to the front of the screen first).
-            foreach (SelectionBlueprint blueprint in SelectionBlueprints.AliveChildren.Reverse())
+            foreach (SelectionBlueprint blueprint in SelectionBlueprints.AliveChildren.OrderBy(x => x, new LatestBlueprintComparer(EditorClock.CurrentTime)))
             {
                 if (!blueprint.IsHovered) continue;
 
@@ -346,6 +346,32 @@ namespace osu.Game.Screens.Edit.Compose.Components
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Compares two SelectionBlueprints and returns which is the latest blueprint from a specified time.
+        /// Compare(...) will prefer any blueprint earlier than currentTime over any blueprint later than currentTime,
+        /// and then it will prefer the blueprint closer to the currentTime.
+        /// </summary>
+        public class LatestBlueprintComparer : IComparer<SelectionBlueprint>
+        {
+            private double currentTime;
+
+            public LatestBlueprintComparer(double time)
+            {
+                currentTime = time;
+            }
+
+            public int Compare(SelectionBlueprint first, SelectionBlueprint second)
+            {
+                if (first.HitObject.StartTime == second.HitObject.StartTime) return 0;
+
+                if (first.HitObject.StartTime > second.HitObject.StartTime)
+                {
+                    return first.HitObject.StartTime <= currentTime ? -1 : 1;
+                }
+                return second.HitObject.StartTime <= currentTime ? 1 : -1;
+            }
         }
 
         /// <summary>
